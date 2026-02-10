@@ -1,34 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react'
 import imageOne from '../../assets/image/image1.jpeg'
-import imageTwo from '../../assets/image/image2.jpeg'
-import imageThree from '../../assets/image/image3.jpeg'
-import imageFour from '../../assets/image/image4.jpeg'
+import { Play, Pause, VolumeX, Volume2 } from 'lucide-react'
 import {
-  Play,
-  Pause,
-  ChevronLeft,
-  ChevronRight,
-  VolumeX,
-  Volume2
-} from 'lucide-react'
-import {
-  CarouselWrapper,
   Container,
-  ImageSlide,
-  NavButton,
+  ImageWrapper,
+  OverlayPlayButton,
+  ImageBackground,
   PlayerContainer,
   ProgressBarWrapper,
   ProgressBar,
   ProgressFill,
   ControlsWrapper,
   TimeDisplay,
-  PlayButton,
-  VolumeButton,
   VolumeControl,
+  VolumeButton,
   VolumeSlider
 } from './styles'
-
-const images = [imageOne, imageTwo, imageThree, imageFour]
 
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60)
@@ -36,121 +23,103 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-const SpotifyCarousel = () => {
-  const [currentSlide, setCurrentSlide] = useState(0)
+const SpotifyPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(false)
   const [volume, setVolume] = useState(70)
   const [isMuted, setIsMuted] = useState(false)
-  const duration = 180 // 3 minutos
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setCurrentTime((prev) => {
-          if (prev >= duration) {
-            setIsPlaying(false)
-            return 0
-          }
-          return prev + 0.1
-        })
-      }, 100)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isPlaying, duration])
-
-  const handlePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause()
-      } else {
-        audioRef.current.play().catch((error) => {
-          console.error('Erro ao reproduzir áudio:', error)
-        })
-      }
-      setIsPlaying(!isPlaying)
-    }
-  }
-
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const percentage = x / rect.width
-    setCurrentTime(percentage * duration)
-  }
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseInt(e.target.value)
-    setVolume(newVolume)
-    if (newVolume > 0 && isMuted) {
-      setIsMuted(false)
-    }
-  }
-
+  // Sincroniza o volume do elemento áudio
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume / 100
     }
   }, [volume, isMuted])
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted)
+  const handlePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current
+          .play()
+          .catch((err) => console.error('Erro ao dar play:', err))
+      }
+      setIsPlaying(!isPlaying)
+    }
   }
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % images.length)
+  // Atualiza o tempo atual conforme a música toca
+  const onTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime)
+    }
   }
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + images.length) % images.length)
+  // Pega a duração total assim que o arquivo carrega
+  const onLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration)
+    }
   }
 
-  const progress = (currentTime / duration) * 100
+  // Função para pular para um tempo específico ao clicar na barra
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (audioRef.current && duration) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const percentage = x / rect.width
+      const newTime = percentage * duration
+
+      audioRef.current.currentTime = newTime
+      setCurrentTime(newTime)
+    }
+  }
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseInt(e.target.value)
+    setVolume(newVolume)
+    if (newVolume > 0) setIsMuted(false)
+  }
+
+  const progress = duration ? (currentTime / duration) * 100 : 0
 
   return (
     <Container
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
-      style={{ width: '100%' }}
+      // No mobile, o primeiro toque ativa o hover (mostra os controles)
     >
       <audio
         ref={audioRef}
         src="/music/music-1.mpeg"
-        onError={(e) =>
-          console.error('Erro ao carregar áudio:', e.currentTarget.error)
-        }
+        onTimeUpdate={onTimeUpdate}
+        onLoadedMetadata={onLoadedMetadata}
+        onEnded={() => setIsPlaying(false)}
       />
-      <CarouselWrapper>
-        {images.map((image, index) => (
-          <ImageSlide
-            key={index}
-            image={image}
-            active={index === currentSlide}
-          />
-        ))}
-      </CarouselWrapper>
 
-      <NavButton className="left" onClick={prevSlide}>
-        <ChevronLeft size={24} />
-      </NavButton>
-      <NavButton className="right" onClick={nextSlide}>
-        <ChevronRight size={24} />
-      </NavButton>
+      <ImageWrapper>
+        <ImageBackground image={imageOne} />
 
-      <PlayerContainer showControls={showControls}>
-        <ProgressBarWrapper visible={showControls}>
+        {/* O clique agora está apenas aqui! */}
+        <OverlayPlayButton
+          $showControls={showControls}
+          onClick={handlePlayPause}
+        >
+          {isPlaying ? (
+            <Pause size={48} fill="white" />
+          ) : (
+            <Play size={48} fill="white" style={{ marginLeft: '4px' }} />
+          )}
+        </OverlayPlayButton>
+      </ImageWrapper>
+
+      <PlayerContainer $showControls={showControls}>
+        <ProgressBarWrapper>
           <ProgressBar onClick={handleProgressClick}>
             <ProgressFill progress={progress} />
           </ProgressBar>
@@ -158,21 +127,11 @@ const SpotifyCarousel = () => {
 
         <ControlsWrapper>
           <TimeDisplay>
-            <span>{formatTime(currentTime)}</span>
-            <span>/</span>
-            <span>{formatTime(duration)}</span>
+            {formatTime(currentTime)} / {formatTime(duration)}
           </TimeDisplay>
 
-          <PlayButton onClick={handlePlayPause}>
-            {isPlaying ? (
-              <Pause size={16} fill="black" />
-            ) : (
-              <Play size={16} fill="black" />
-            )}
-          </PlayButton>
-
           <VolumeControl>
-            <VolumeButton onClick={toggleMute}>
+            <VolumeButton onClick={() => setIsMuted(!isMuted)}>
               {isMuted || volume === 0 ? (
                 <VolumeX size={20} />
               ) : (
@@ -193,4 +152,4 @@ const SpotifyCarousel = () => {
   )
 }
 
-export default SpotifyCarousel
+export default SpotifyPlayer
