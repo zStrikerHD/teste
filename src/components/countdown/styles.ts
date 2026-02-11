@@ -52,7 +52,7 @@ export const Wrapper = styled.section`
       transparent 45%
     ),
     linear-gradient(135deg, var(--rose-1), var(--peach-1), var(--rose-2));
-  box-shadow: 0 22px 60px rgba(159, 68, 90, 0.25);
+  box-shadow: 0 10px 10px rgba(159, 68, 90, 0.25);
   overflow: hidden;
   isolation: isolate;
   color: var(--rose-ink);

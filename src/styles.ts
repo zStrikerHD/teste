@@ -19,7 +19,7 @@ export const GlobalCss = createGlobalStyle`
 
   body {
     background-color: ${cores.rosaEscuro};
-    color: ${cores.rosaEscuro};
+    color: #000;
   }
 
   .container {

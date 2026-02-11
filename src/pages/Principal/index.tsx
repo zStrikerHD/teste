@@ -1,3 +1,4 @@
+import Collection from '../../components/Collection'
 import CountDown from '../../components/countdown'
 import Header from '../../components/Header'
 import PrincipalPage from '../../components/PricipalPage'
@@ -121,6 +122,7 @@ const Principal = () => {
           <CountDown />
         </div>
       </PageContent>
+      <Collection />
     </PageWrapper>
   )
 }
